@@ -62,7 +62,22 @@ def _from_abuse(ab: AbuseResult, a: Assessment) -> Verdict:
     return Verdict.CLEAN
 
 
-def evaluate(vt: VTResult | None, abuse: AbuseResult | None) -> Assessment:
+def _from_domain(dvt: VTResult, a: Assessment) -> Verdict | None:
+    """Contexto cuando la URL exacta es desconocida: solo cuenta si el dominio es malo."""
+    if not dvt.found:
+        a.notes.append("El dominio de la URL tampoco tiene información en VirusTotal.")
+        return None
+    if dvt.malicious >= VT_SUSPICIOUS_MIN:
+        a.reasons.append(f"Dominio de la URL: {dvt.malicious} motores lo marcan como malicioso.")
+        return Verdict.MALICIOUS if dvt.malicious >= VT_MALICIOUS_MIN else Verdict.SUSPICIOUS
+    # Un dominio limpio NO hace limpia la URL (phishing en dominios legítimos)
+    a.notes.append("El dominio no tiene detecciones relevantes, pero la URL exacta "
+                   "no ha sido analizada: un dominio legítimo puede alojar contenido malicioso.")
+    return None
+
+
+def evaluate(vt: VTResult | None, abuse: AbuseResult | None,
+             domain_vt: VTResult | None = None) -> Assessment:
     """Evalúa cada fuente disponible y se queda con el veredicto más grave."""
     a = Assessment(Verdict.UNKNOWN)
     found = []
@@ -70,6 +85,10 @@ def evaluate(vt: VTResult | None, abuse: AbuseResult | None) -> Assessment:
         found.append(_from_vt(vt, a))
     if abuse is not None:
         found.append(_from_abuse(abuse, a))
+    if domain_vt is not None:
+        v = _from_domain(domain_vt, a)
+        if v is not None:
+            found.append(v)
     if found:
         a.verdict = max(found, key=lambda v: v.severity)
     if a.verdict is Verdict.CLEAN:

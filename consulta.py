@@ -35,6 +35,8 @@ async def main(raw: str) -> None:
             print("  *", note)
     if r.vt and r.vt.link:
         print("\nVirusTotal:", r.vt.link)
+    if r.domain_vt and r.domain_vt.link:
+        print("Dominio en VirusTotal:", r.domain_vt.link)
     if r.abuse:
         print("AbuseIPDB:", r.abuse.link)
 

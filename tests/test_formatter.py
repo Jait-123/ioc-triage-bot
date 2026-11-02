@@ -47,3 +47,13 @@ def test_historial():
     msg = format_history([(0, "malo.com", "dominio", "MALICIOUS")])
     assert "malo[.]com" in msg and "🔴" in msg
     assert "Todavía" in format_history([])
+
+
+def test_url_desconocida_muestra_dominio_neutralizado():
+    from ioc.service import url_host
+    url = "https://best.aliexpress.com/?x=1"
+    r = Report(parse_ioc(url), vt=VTResult(found=False),
+               domain=url_host(url), domain_vt=VTResult(found=True, harmless=60, link="https://vt/d"))
+    r.assessment = evaluate(r.vt, None, r.domain_vt)
+    msg = format_report(r)
+    assert "best[.]aliexpress[.]com" in msg and "no analizada" in msg

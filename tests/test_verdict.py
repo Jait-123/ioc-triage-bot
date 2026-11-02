@@ -53,3 +53,23 @@ def test_vt_desconoce_pero_abuseipdb_alto():
 def test_limpio_avisa_que_no_garantiza_seguridad():
     a = evaluate(vt(0), None)
     assert any("no garantiza" in n for n in a.notes)
+
+
+# ---------- URL desconocida + contexto del dominio ----------
+
+def test_url_desconocida_dominio_limpio_sigue_desconocida():   # real: enlace de AliExpress
+    a = evaluate(vt(0, found=False), None, domain_vt=vt(0))
+    assert a.verdict is Verdict.UNKNOWN
+    assert any("URL exacta" in n for n in a.notes)
+
+
+def test_url_desconocida_dominio_malicioso_sube_veredicto():
+    assert evaluate(vt(0, found=False), None, domain_vt=vt(8)).verdict is Verdict.MALICIOUS
+
+
+def test_url_desconocida_dominio_sospechoso():
+    assert evaluate(vt(0, found=False), None, domain_vt=vt(2)).verdict is Verdict.SUSPICIOUS
+
+
+def test_dominio_con_una_deteccion_no_sube_veredicto():
+    assert evaluate(vt(0, found=False), None, domain_vt=vt(1)).verdict is Verdict.UNKNOWN

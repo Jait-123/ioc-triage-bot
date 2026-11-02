@@ -30,23 +30,30 @@ class Cache:
         self.db = sqlite3.connect(path)
         self.db.executescript(SCHEMA)
 
-    def get(self, ioc: str) -> tuple[VTResult | None, AbuseResult | None] | None:
-        """Devuelve (vt, abuse) si hay un resultado reciente; si no, None."""
+    def get(self, ioc: str) -> tuple[VTResult | None, AbuseResult | None, VTResult | None] | None:
+        """Devuelve (vt, abuse, domain_vt) si hay un resultado vigente; si no, None."""
         # Consultas parametrizadas (?): nunca concatenar texto del usuario en SQL
         row = self.db.execute(
             "SELECT payload, created_at FROM cache WHERE ioc = ?", (ioc,)
         ).fetchone()
-        if row is None or self.clock() - row[1] > self.ttl:
+        if row is None:
             return None
         data = json.loads(row[0])
+        ttl = data.get("ttl", self.ttl)     # cada resultado puede tener su propio TTL
+        if self.clock() - row[1] > ttl:
+            return None
         vt = VTResult(**data["vt"]) if data["vt"] else None
         abuse = AbuseResult(**data["abuse"]) if data["abuse"] else None
-        return vt, abuse
+        domain_vt = VTResult(**data["domain_vt"]) if data.get("domain_vt") else None
+        return vt, abuse, domain_vt
 
-    def set(self, ioc: str, vt: VTResult | None, abuse: AbuseResult | None) -> None:
+    def set(self, ioc: str, vt: VTResult | None, abuse: AbuseResult | None,
+            domain_vt: VTResult | None = None, ttl_hours: float | None = None) -> None:
         payload = json.dumps({
             "vt": asdict(vt) if vt else None,
             "abuse": asdict(abuse) if abuse else None,
+            "domain_vt": asdict(domain_vt) if domain_vt else None,
+            "ttl": ttl_hours * 3600 if ttl_hours is not None else self.ttl,
         })
         self.db.execute(
             "INSERT OR REPLACE INTO cache (ioc, payload, created_at) VALUES (?, ?, ?)",

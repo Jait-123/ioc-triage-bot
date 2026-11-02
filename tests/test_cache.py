@@ -9,7 +9,7 @@ AB = AbuseResult(score=80, total_reports=3, country="CN", isp="i",
 def test_guarda_y_recupera(tmp_path):
     c = Cache(tmp_path / "t.db")
     c.set("1.2.3.4", VT, AB)
-    assert c.get("1.2.3.4") == (VT, AB)
+    assert c.get("1.2.3.4") == (VT, AB, None)
 
 
 def test_expira_tras_ttl(tmp_path):
@@ -35,3 +35,13 @@ def test_inyeccion_sql_se_trata_como_texto(tmp_path):
     c = Cache(tmp_path / "t.db")
     c.log("x'); DROP TABLE history;--", "dominio", "CLEAN")
     assert len(c.history()) == 1     # la tabla sigue existiendo
+
+
+def test_ttl_propio_por_resultado(tmp_path):
+    t = [0.0]
+    c = Cache(tmp_path / "t.db", ttl_hours=24, clock=lambda: t[0])
+    c.set("http://x.com/a", VTResult(found=False), None, ttl_hours=1)
+    c.set("google.com", VT, None)
+    t[0] = 3601                      # 1 h y 1 s después
+    assert c.get("http://x.com/a") is None        # el desconocido ya caducó
+    assert c.get("google.com") is not None        # el resto sigue vigente

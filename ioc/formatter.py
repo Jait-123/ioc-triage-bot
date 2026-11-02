@@ -28,6 +28,13 @@ def format_report(r: Report) -> str:
     if r.vt and r.vt.found:
         total = r.vt.malicious + r.vt.suspicious + r.vt.harmless + r.vt.undetected
         lines.append(f"VirusTotal: {r.vt.malicious}/{total} motores maliciosos")
+    if r.vt and not r.vt.found:
+        lines.append("VirusTotal: URL no analizada previamente")
+    if r.domain and r.domain_vt and r.domain_vt.found:
+        d = r.domain_vt
+        total = d.malicious + d.suspicious + d.harmless + d.undetected
+        lines.append(f"Dominio <code>{escape(defang(r.domain.value))}</code>: "
+                     f"{d.malicious}/{total} motores maliciosos")
     if r.abuse:
         lines.append(f"AbuseIPDB: {r.abuse.score}/100 · {r.abuse.total_reports} reportes")
         extra = " · ".join(escape(x) for x in (r.abuse.country, r.abuse.isp, r.abuse.usage_type) if x)
@@ -44,6 +51,8 @@ def format_report(r: Report) -> str:
     links = []
     if r.vt and r.vt.link:
         links.append(f'<a href="{escape(r.vt.link)}">VirusTotal</a>')
+    if r.domain_vt and r.domain_vt.link:
+        links.append(f'<a href="{escape(r.domain_vt.link)}">Dominio en VirusTotal</a>')
     if r.abuse:
         links.append(f'<a href="{escape(r.abuse.link)}">AbuseIPDB</a>')
     if links:
