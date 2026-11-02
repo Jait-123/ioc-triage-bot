@@ -39,6 +39,10 @@ def refang(text: str) -> str:
         text = text.replace(fake, real)
     return text
 
+def defang(value: str) -> str:
+    """Neutraliza un IOC para mostrarlo sin que sea clicable (lo inverso de refang)."""
+    value = re.sub(r"^http", "hxxp", value, flags=re.IGNORECASE)
+    return value.replace(".", "[.]")
 
 def detect_type(value: str) -> IOCType | None:
     """Devuelve el tipo de IOC o None si no se reconoce."""
